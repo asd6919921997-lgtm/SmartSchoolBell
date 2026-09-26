@@ -13,10 +13,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22 (Required for Capacitor 8)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Dependencies
         run: npm install
@@ -36,8 +36,13 @@ jobs:
 
       - name: Accept Android Licenses
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" || true
+          if command -v sdkmanager &> /dev/null; then
+            yes | sdkmanager --licenses || true
+            sdkmanager "platforms;android-34" "build-tools;34.0.0" || true
+          else
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0" || true
+          fi
 
       - name: Make Gradlew Executable
         run: chmod +x android/gradlew
