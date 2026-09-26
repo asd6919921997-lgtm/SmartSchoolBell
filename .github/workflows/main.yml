@@ -33,17 +33,13 @@ jobs:
 
       - name: Fix Kotlin Duplicate Classes
         run: |
-          cat << 'EOF' >> android/app/build.gradle
-
-configurations.all {
-    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
-    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
-}
-EOF
+          echo "configurations.all {" >> android/app/build.gradle
+          echo "    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'" >> android/app/build.gradle
+          echo "    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'" >> android/app/build.gradle
+          echo "}" >> android/app/build.gradle
 
       - name: Accept Android SDK Licenses
-        run: |
-          yes | sudo /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        run: yes | sudo /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Ensure Keystore Exists
         run: |
