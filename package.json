@@ -1,0 +1,21 @@
+{
+  "name": "smart-school-bell",
+  "version": "1.0.0",
+  "description": "Smart School Bell and Supervisor Class Management Android App",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "school-bell",
+    "android",
+    "timer"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  }
+}

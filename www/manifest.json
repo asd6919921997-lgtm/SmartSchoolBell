@@ -1,0 +1,26 @@
+{
+  "name": "المنبه والجرس المدرسي الذكي",
+  "short_name": "المنبه المدرسي",
+  "description": "تطبيق إدارة الحصة الذكية وجدول الحصص المدرسي والتنبيهات المسبقة",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b081e",
+  "theme_color": "#0b081e",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">المنبه المدرسي الذكي</string>
+    <string name="title_activity_main">المنبه المدرسي الذكي</string>
+    <string name="package_name">com.smartschool.bell</string>
+    <string name="custom_url_scheme">com.smartschool.bell</string>
+</resources>

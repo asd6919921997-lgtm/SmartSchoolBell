@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المنبه والجرس المدرسي الذكي</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0b081e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- الحاوية الذكية الأنيقة المستوحاة من واجهة التطبيق في الصورة -->
+    <div class="device-container" id="deviceContainer">
+        
+        <!-- الهيدر العلوي والتنقل السريع -->
+        <header class="app-topbar">
+            <div class="topbar-title">
+                <span id="currentViewTitle">الحصص والتنبيهات</span>
+            </div>
+            <div class="topbar-actions">
+                <button class="icon-btn-round" id="installAppBtn" title="تثبيت التطبيق على هاتف الأندرويد" style="display: none; background: rgba(16, 185, 129, 0.25); color: #34d399; border-color: rgba(16, 185, 129, 0.5);">
+                    📲
+                </button>
+                <button class="icon-btn-round" id="topAddBtn" title="إضافة حصة يدوية جديدة">
+                    ＋
+                </button>
+                <button class="icon-btn-round" id="manualRingBellBtn" title="ضرب جرس المدرسة يدوياً">
+                    🔔
+                </button>
+                <button class="icon-btn-round" id="expandViewBtn" title="توسيع للوضع المكتبي العريض">
+                    ⛶
+                </button>
+            </div>
+        </header>
+
+        <!-- شريط الأيام المدرسية من السبت إلى الخميس -->
+        <nav class="days-bar" id="daysBar">
+            <div class="day-chip" data-day="sat">السبت</div>
+            <div class="day-chip active" data-day="sun">الأحد</div>
+            <div class="day-chip" data-day="mon">الإثنين</div>
+            <div class="day-chip" data-day="tue">الثلاثاء</div>
+            <div class="day-chip" data-day="wed">الأربعاء</div>
+            <div class="day-chip" data-day="thu">الخميس</div>
+        </nav>
+
+        <!-- منطقة المحتوى القابلة للتمرير -->
+        <main class="scroll-content" id="scrollContent">
+
+            <!-- ===================== 1. واجهة الحصص والمنبهات (Alarms View) ===================== -->
+            <section id="viewAlarms" class="view-panel active">
+                
+                <!-- بطاقة حالة اليوم والوقت الحالي بنظام 12 ساعة وتخصيص اليوم -->
+                <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(217, 70, 239, 0.15)); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: var(--radius-xl); padding: 1.1rem 1.25rem; margin-bottom: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <span style="font-size: 0.85rem; color: #c084fc; font-weight: 700;">
+                            🕒 الوقت الحالي: <strong id="liveTimeClock" style="color: white; font-size: 1.15rem; font-variant-numeric: tabular-nums;">--:--:-- ص</strong>
+                        </span>
+                        <div style="display: flex; gap: 0.4rem; align-items: center;">
+                            <label class="glow-switch" style="width: 44px; height: 24px;" title="تفعيل أو تعطيل هذا اليوم">
+                                <input type="checkbox" id="currentDayToggleChk" checked>
+                                <span class="glow-slider" style="border-radius: 20px;"></span>
+                            </label>
+                            <span id="currentDayStateLabel" style="font-size: 0.8rem; font-weight: 700; color: #34d399;">يوم دراسي</span>
+                        </div>
+                    </div>
+                    <div id="liveStatusBanner" style="font-size: 1.05rem; font-weight: 800; margin-top: 0.5rem; color: #ffffff;">
+                        جاري فحص جدول اليوم...
+                    </div>
+                </div>
+
+                <!-- شريط الاستراحة / الفسحة المخصص لليوم -->
+                <div id="dayBreakCard" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: var(--radius-lg); padding: 0.75rem 1rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span style="font-size: 1.2rem;">☕</span>
+                        <div>
+                            <div style="font-size: 0.88rem; font-weight: 700; color: white;">استراحة / فسحة هذا اليوم</div>
+                            <div id="breakSummaryText" style="font-size: 0.75rem; color: var(--text-muted);">مفعلة (20 دقيقة بعد الحصة 3)</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <button class="btn-ghost" id="editBreakBtn" style="padding: 0.3rem 0.65rem; font-size: 0.78rem;">
+                            ✏️ تعديل
+                        </button>
+                        <label class="glow-switch" style="width: 44px; height: 24px;" title="تفعيل أو إلغاء الاستراحة لهذا اليوم">
+                            <input type="checkbox" id="breakEnableChk" checked>
+                            <span class="glow-slider" style="border-radius: 20px;"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- رسالة في حال كان اليوم معطلاً أو فارغاً -->
+                <div id="dayDisabledNotice" style="display: none; text-align: center; padding: 2.5rem 1rem; background: var(--bg-card); border-radius: var(--radius-xl); border: 1px dashed var(--border-card);">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏖️</div>
+                    <h3 style="font-size: 1.1rem; color: white; margin-bottom: 0.3rem;">هذا اليوم معطل (إجازة رسمية)</h3>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">يمكنك تفعيله من زر التبديل بالأعلى في أي وقت</p>
+                    <button class="btn-neon-purple" id="enableDayBtn" style="font-size: 0.85rem; padding: 0.5rem 1rem;">
+                        تفعيل اليوم الآن
+                    </button>
+                </div>
+
+                <!-- قائمة بطاقات الحصص الحقيقية المضافة من المستخدم -->
+                <div id="alarmCardsContainer" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <!-- تُحقن البطاقات ديناميكياً من JavaScript -->
+                </div>
+
+                <!-- زر إضافة حصة سريعة في أسفل القائمة -->
+                <div style="margin-top: 0.75rem; text-align: center;">
+                    <button class="btn-ghost" id="addPeriodQuickBtn" style="width: 100%; justify-content: center; padding: 0.75rem; border-style: dashed;">
+                        ➕ إضافة حصة جديدة لهذا اليوم
+                    </button>
+                </div>
+            </section>
+
+            <!-- ===================== 2. واجهة مؤقت الحصة والمشرف (Timer View) ===================== -->
+            <section id="viewTimer" class="view-panel" style="display: none;">
+                
+                <!-- شريط التبديل بين البدء اليدوي والجدولة المسبقة التلقائية -->
+                <div style="display: flex; gap: 0.5rem; background: rgba(255, 255, 255, 0.04); padding: 0.35rem; border-radius: 16px; border: 1px solid var(--border-card); margin-bottom: 0.85rem;">
+                    <button class="day-chip active" id="timerModeManualBtn" style="margin: 0; padding: 0.5rem; font-size: 0.82rem; border-radius: 12px;">
+                        ⚡ بدء يدوي فوري
+                    </button>
+                    <button class="day-chip" id="timerModeScheduledBtn" style="margin: 0; padding: 0.5rem; font-size: 0.82rem; border-radius: 12px;">
+                        ⏰ جدولة وضبط مسبق (تلقائي بدون لمس الجوال)
+                    </button>
+                </div>
+
+                <!-- بطاقة الجدولة المسبقة لحصة محددة (تظهر عند اختيار الجدولة المسبقة) -->
+                <div id="scheduledPresetCard" style="display: none; background: rgba(139, 92, 246, 0.12); border: 1px solid var(--accent-purple); border-radius: var(--radius-xl); padding: 1.1rem; margin-bottom: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <span style="font-weight: 800; font-size: 0.95rem; color: #c084fc;">📅 ضبط الحصة المستهدفة مسبقاً:</span>
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <label class="glow-switch" style="width: 44px; height: 24px;" title="تفعيل الجدولة الآلية">
+                                <input type="checkbox" id="enableAutoScheduleChk">
+                                <span class="glow-slider" style="border-radius: 20px;"></span>
+                            </label>
+                            <span id="autoScheduleStateText" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">معطلة</span>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 0.6rem; margin-bottom: 0.75rem;">
+                        <div class="form-group" style="flex: 1; margin: 0;">
+                            <label style="font-size: 0.8rem;">اختر اليوم:</label>
+                            <select id="presetTargetDaySelect" class="form-control-dark" style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                                <option value="sat">السبت</option>
+                                <option value="sun">الأحد</option>
+                                <option value="mon">الإثنين</option>
+                                <option value="tue">الثلاثاء</option>
+                                <option value="wed">الأربعاء</option>
+                                <option value="thu" selected>الخميس</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1.4; margin: 0;">
+                            <label style="font-size: 0.8rem;">اختر الحصة أو توقيت يدوي:</label>
+                            <select id="presetTargetClassSelect" class="form-control-dark" style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                                <!-- تُحقن خيارات الحصص ديناميكياً من جدول اليوم -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- حقول التوقيت المخصص في حال اختار المعلم تحديد وقت بداية ونهاية يدوي -->
+                    <div id="customTimeRangeBox" style="display: none; background: rgba(0, 0, 0, 0.25); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 0.75rem; border: 1px dashed rgba(139, 92, 246, 0.3);">
+                        <div style="display: flex; gap: 0.6rem;">
+                            <div class="form-group" style="flex: 1; margin: 0;">
+                                <label style="font-size: 0.78rem;">وقت البداية:</label>
+                                <input type="time" id="presetManualStartInput" class="form-control-dark" value="08:35" style="padding: 0.4rem 0.5rem; font-size: 0.85rem;">
+                            </div>
+                            <div class="form-group" style="flex: 1; margin: 0;">
+                                <label style="font-size: 0.78rem;">وقت النهاية:</label>
+                                <input type="time" id="presetManualEndInput" class="form-control-dark" value="09:15" style="padding: 0.4rem 0.5rem; font-size: 0.85rem;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- شريط الحالة للتنبيه التلقائي -->
+                    <div id="autoScheduleBanner" style="font-size: 0.82rem; color: #34d399; font-weight: 700; line-height: 1.4; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 0.6rem 0.75rem;">
+                        💡 عند تفعيل الجدولة، سيتعرف التطبيق على بداية الحصة وينطلق المؤقت تلقائياً ويصدر تنبيهاتك المحددة بالأسفل دون الحاجة لفتح الجوال!
+                    </div>
+                </div>
+
+                <!-- بطاقة المؤقت البنفسجي النيون -->
+                <div class="timer-hero-purple">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span id="activeClassTitle" style="font-size: 0.95rem; font-weight: 700; color: #c084fc;">إدارة الحصة المتقدمة</span>
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <label style="font-size: 0.8rem; color: var(--text-muted);">المدة:</label>
+                            <input type="number" id="timerManualMinutesInput" class="form-control-dark" min="5" max="180" value="45" style="width: 70px; padding: 0.25rem 0.5rem; text-align: center; font-size: 0.85rem;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">د</span>
+                        </div>
+                    </div>
+
+                    <div id="lessonStageBadge" style="display: inline-block; background: rgba(139, 92, 246, 0.3); border: 1px solid var(--accent-purple); color: #ffffff; padding: 0.3rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">
+                        1. التهيئة والتمهيد
+                    </div>
+
+                    <div class="timer-display" id="bigTimerDisplay">45:00</div>
+
+                    <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; justify-content: center; gap: 1rem;">
+                        <span>المنقضي: <strong id="elapsedMinsDisplay" style="color: white;">00:00</strong></span>
+                        <span>•</span>
+                        <span>المتبقي: <strong id="remainingMinsDisplay" style="color: #c084fc;">45:00</strong></span>
+                    </div>
+
+                    <!-- شريط التقدم النيون -->
+                    <div class="neon-progress-track">
+                        <div class="neon-progress-fill" id="neonProgressFill"></div>
+                    </div>
+
+                    <!-- مراحل الحصة الأربعة المعتمدة إشرافياً -->
+                    <div class="stages-row">
+                        <div class="stage-card active" id="stg1">
+                            <div>التهيئة</div>
+                            <small id="stg1Time">0-5 د</small>
+                        </div>
+                        <div class="stage-card" id="stg2">
+                            <div>الشرح</div>
+                            <small id="stg2Time">5-25 د</small>
+                        </div>
+                        <div class="stage-card" id="stg3">
+                            <div>الأنشطة</div>
+                            <small id="stg3Time">25-38 د</small>
+                        </div>
+                        <div class="stage-card" id="stg4">
+                            <div>التقويم</div>
+                            <small id="stg4Time">38-45 د</small>
+                        </div>
+                    </div>
+
+                    <!-- أزرار التحكم بالمؤقت -->
+                    <div class="action-buttons-row">
+                        <button class="btn-neon-purple" id="startTimerBtn">
+                            ▶️ بدء الحصة
+                        </button>
+                        <button class="btn-ghost" id="pauseTimerBtn" disabled>
+                            ⏸️ إيقاف
+                        </button>
+                        <button class="btn-ghost" id="resetTimerBtn">
+                            🔄 إعادة ضبط
+                        </button>
+                    </div>
+                </div>
+
+                <!-- بطاقات تنبيهات المشرف المخصصة يدوياً بالكامل -->
+                <div style="margin-top: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                        <h4 style="font-size: 1rem; font-weight: 800; color: white;">تنبيهات إدارة الحصة والمشرف:</h4>
+                        <div style="display: flex; gap: 0.4rem;">
+                            <button class="btn-ghost" id="clearSupervisorAlertsBtn" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; color: var(--accent-red);" title="مسح كافة التنبيهات وإضافة تنبيهاتك الخاصة">
+                                🗑️ مسح الكل
+                            </button>
+                            <button class="btn-neon-purple" id="addSupervisorAlertBtn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                                ＋ إضافة تذكير
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="supervisorAlertsList" style="display: flex; flex-direction: column; gap: 0.6rem;">
+                        <!-- تُحقن بطاقات التنبيهات من JS -->
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ===================== 3. واجهة الضبط العام وجدول الحصص (Schedule View) ===================== -->
+            <section id="viewSchedule" class="view-panel" style="display: none;">
+                <div style="background: var(--bg-card); border: 1px solid var(--border-card); border-radius: var(--radius-xl); padding: 1.25rem;">
+                    <h3 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 1.2rem; color: white;">⚙️ الضبط العام للدوام والحصص</h3>
+
+                    <!-- ضبط بداية الحصة الأولى العام -->
+                    <div class="form-group">
+                        <label>وقت بداية الحصة الأولى العام (يسري على كل الأيام):</label>
+                        <input type="time" id="globalStartTimeInput" class="form-control-dark" value="07:00">
+                        <small style="color: var(--text-dim); margin-top: 3px;">يسري تلقائياً على كل الأيام مع إمكانية التغيير المخصص لأي يوم محدد.</small>
+                    </div>
+
+                    <!-- ضبط مدة الحصة الواحدة العام -->
+                    <div class="form-row" style="display: flex; gap: 0.75rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>مدة الحصة الافتراضية (بالدقائق):</label>
+                            <input type="number" id="globalPeriodDurationInput" class="form-control-dark" min="10" max="120" value="45">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>عدد الحصص اليومي الافتراضي:</label>
+                            <input type="number" id="globalPeriodCountInput" class="form-control-dark" min="1" max="12" value="7">
+                        </div>
+                    </div>
+
+                    <!-- زر توليد الحصص التلقائي لكل الأسبوع بناء على الضبط العام -->
+                    <div class="form-group" style="margin-top: 0.5rem;">
+                        <button class="btn-ghost" id="applyGlobalToAllDaysBtn" style="width: 100%; justify-content: center; border-color: var(--accent-purple); color: #c084fc;">
+                            ⚡ تطبيق الضبط العام وتوليد الحصص للأيام المفعلة
+                        </button>
+                    </div>
+
+                    <hr style="border: 0; border-top: 1px solid var(--border-card); margin: 1.25rem 0;">
+
+                    <!-- ضبط أيام الدوام المفعلة في الأسبوع -->
+                    <div class="form-group">
+                        <label>أيام الدوام المدرسي المعتمدة (السبت - الخميس):</label>
+                        <div id="weekDaysCheckboxes" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.4rem;">
+                            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: white; cursor: pointer;">
+                                <input type="checkbox" class="day-active-chk" data-day="sat" style="accent-color: var(--accent-purple);">
+                                <span>السبت</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: white; cursor: pointer;">
+                                <input type="checkbox" class="day-active-chk" data-day="sun" checked style="accent-color: var(--accent-purple);">
+                                <span>الأحد</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: white; cursor: pointer;">
+                                <input type="checkbox" class="day-active-chk" data-day="mon" checked style="accent-color: var(--accent-purple);">
+                                <span>الإثنين</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: white; cursor: pointer;">
+                                <input type="checkbox" class="day-active-chk" data-day="tue" checked style="accent-color: var(--accent-purple);">
+                                <span>الثلاثاء</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: white; cursor: pointer;">
+                                <input type="checkbox" class="day-active-chk" data-day="wed" checked style="accent-color: var(--accent-purple);">
+                                <span>الأربعاء</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: white; cursor: pointer;">
+                                <input type="checkbox" class="day-active-chk" data-day="thu" checked style="accent-color: var(--accent-purple);">
+                                <span>الخميس</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <hr style="border: 0; border-top: 1px solid var(--border-card); margin: 1.25rem 0;">
+
+                    <!-- التنبيه المسبق وجرس المدرسة التلقائي -->
+                    <div class="form-group">
+                        <label>التنبيه التلقائي قبل بداية كل حصة:</label>
+                        <select id="configPreAlertSelect" class="form-control-dark">
+                            <option value="0">معطل (لا تنبيه مسبق)</option>
+                            <option value="2">قبل دقيقتين (2 د)</option>
+                            <option value="3">قبل 3 دقائق (3 د)</option>
+                            <option value="5" selected>قبل 5 دقائق (5 د) - موصى به</option>
+                            <option value="10">قبل 10 دقائق (10 د)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; color: white;">
+                            <input type="checkbox" id="configAutoBellChk" checked style="accent-color: var(--accent-purple); width: 20px; height: 20px;">
+                            <span>رنين جرس المدرسة التلقائي عند بداية ونهاية كل حصة</span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===================== 4. واجهة الإعدادات وتصفير البيانات والصوت (Settings View) ===================== -->
+            <section id="viewSettings" class="view-panel" style="display: none;">
+                <div style="background: var(--bg-card); border: 1px solid var(--border-card); border-radius: var(--radius-xl); padding: 1.25rem;">
+                    <h3 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 1.2rem; color: white;">🔊 إعدادات الصوت وملف التنبيه (MP3)</h3>
+
+                    <!-- مدة رنين جرس التنبيه (5 أو 10 ثواني) -->
+                    <div class="form-group">
+                        <label>مدة رنين التنبيه / الجرس:</label>
+                        <select id="bellDurationSelect" class="form-control-dark">
+                            <option value="3">3 ثواني (قصير وهادئ)</option>
+                            <option value="5" selected>5 ثواني (قياسي ومتوسط)</option>
+                            <option value="7">7 ثواني</option>
+                            <option value="10">10 ثواني (طويل ومسموع)</option>
+                            <option value="15">15 ثانية (تنبيه ممتد)</option>
+                        </select>
+                    </div>
+
+                    <!-- اختيار ملف صوتي MP3 من الهاتف -->
+                    <div class="form-group" style="background: rgba(139, 92, 246, 0.1); border: 1px dashed rgba(139, 92, 246, 0.4); border-radius: var(--radius-lg); padding: 1rem;">
+                        <label style="color: #c084fc; font-weight: 700; margin-bottom: 0.5rem; display: block;">
+                            🎵 اختيار ملف صوتي للتنبيه من هاتفك (MP3):
+                        </label>
+                        <input type="file" id="customAudioFileInput" accept="audio/*" style="display: none;">
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <button class="btn-neon-purple" id="chooseCustomAudioBtn" style="font-size: 0.85rem; padding: 0.45rem 0.9rem;">
+                                📁 اختر ملف صوتي من الهاتف
+                            </button>
+                            <button class="btn-ghost" id="testCustomAudioBtn" style="font-size: 0.85rem; padding: 0.45rem 0.9rem;">
+                                ▶️ تجربة
+                            </button>
+                            <button class="btn-ghost" id="removeCustomAudioBtn" style="font-size: 0.85rem; padding: 0.45rem 0.6rem; color: var(--accent-red); display: none;" title="استعادة نغمة الجرس الافتراضية">
+                                ✕ إزالة
+                            </button>
+                        </div>
+                        <div id="customAudioNameDisplay" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            الصوت المستخدم: جرس المدرسة الذكي الافتراضي
+                        </div>
+                    </div>
+
+                    <!-- كتم كافة الأصوات الأخرى إلى 0% فوراً -->
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; color: white;">
+                            <input type="checkbox" id="duckOtherSoundsChk" checked style="accent-color: var(--accent-purple); width: 20px; height: 20px;">
+                            <span>خفض وكتم أي صوت آخر بنسبة 0% فوراً وبسرعة قياسية ليكون التنبيه هو الوحيد المسموع</span>
+                        </label>
+                    </div>
+
+                    <!-- مستوى الصوت العام -->
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>مستوى صوت التنبيهات (100%):</label>
+                        <input type="range" id="configVolumeSlider" min="0" max="1" step="0.05" value="1.0" style="accent-color: var(--accent-purple); width: 100%;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-top: 3px;">
+                            <span>0% (كتم)</span>
+                            <span id="volumePercentDisplay">100%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+
+                    <!-- الصوت العربي الناطق (TTS) -->
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>الصوت الناطق المفضل (TTS):</label>
+                        <select id="configVoiceSelect" class="form-control-dark"></select>
+                    </div>
+
+                    <!-- قسم تصفير ومسح البيانات التجريبية -->
+                    <div style="margin-top: 2rem; padding: 1.25rem; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-xl);">
+                        <h4 style="color: #f87171; font-size: 1rem; font-weight: 800; margin-bottom: 0.4rem;">
+                            🗑️ تصفير ومسح البيانات التجريبية (للبدء من الصفر)
+                        </h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+                            يقوم هذا الزر بمسح كافة الحصص والتنبيهات الوهمية لتتمكن من إدخال جدولك الحقيقي وحصصك الفعلية بيدك.
+                        </p>
+                        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                            <button class="btn-ghost" id="wipeAllDataBtn" style="border-color: #ef4444; color: #ef4444; font-weight: 800; flex: 1; justify-content: center;">
+                                ⚠️ تصفير الحصص والبدء من الصفر
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- شريط التنقل السفلي الفاخر (مطابق للصورة) -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-view="viewAlarms">
+                <span class="nav-icon">⏰</span>
+                <span class="nav-label">الحصص</span>
+            </button>
+            <button class="nav-item" data-view="viewTimer">
+                <span class="nav-icon">⏱️</span>
+                <span class="nav-label">المشرف</span>
+            </button>
+            <button class="nav-item" data-view="viewSchedule">
+                <span class="nav-icon">📅</span>
+                <span class="nav-label">الجدول</span>
+            </button>
+            <button class="nav-item" data-view="viewSettings">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">الإعدادات</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- نافذة منبثقة لإضافة / تعديل حصة جديدة لليوم الحالي -->
+    <div class="modal-overlay" id="editClassModal">
+        <div class="modal-card">
+            <h3 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 1rem; color: white;">➕ تفاصيل الحصة</h3>
+            
+            <div class="form-group">
+                <label>اسم الحصة / الترتيب:</label>
+                <input type="text" id="modalClassName" class="form-control-dark" placeholder="مثال: الحصة الأولى">
+            </div>
+
+            <div class="form-group">
+                <label>المادة الدراسية:</label>
+                <input type="text" id="modalClassSubject" class="form-control-dark" placeholder="مثال: رياضيات، لغتي، علوم">
+            </div>
+
+            <div class="form-group">
+                <label>الفصل / القاعة:</label>
+                <input type="text" id="modalClassRoom" class="form-control-dark" placeholder="مثال: فصل 3/أ، معمل الحاسب">
+            </div>
+
+            <div class="form-group">
+                <label>مدة الحصة (بالدقائق):</label>
+                <input type="number" id="modalClassDuration" class="form-control-dark" min="5" max="180" value="45">
+                <small style="color: var(--text-dim); margin-top: 2px;">يمكنك تخصيص مدة أي حصة بحرية (مثلاً 45 أو 35 دقيقة).</small>
+            </div>
+
+            <div class="form-group">
+                <label>لون الأيقونة ونمطها:</label>
+                <select id="modalClassIconColor" class="form-control-dark">
+                    <option value="purple">بنفسجي (📅 تقويم)</option>
+                    <option value="blue">أزرق (💼 عمل / حصة)</option>
+                    <option value="cyan">سماوي (🏃 نشاط / رياضة)</option>
+                    <option value="orange">برتقالي (🔔 تذكير / منبه)</option>
+                    <option value="green">أخضر (📚 دراسة)</option>
+                </select>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
+                <button class="btn-ghost" id="closeClassModalBtn">إلغاء</button>
+                <button class="btn-neon-purple" id="saveClassModalBtn">حفظ الحصة</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة منبثقة لضبط استراحة اليوم -->
+    <div class="modal-overlay" id="breakModal">
+        <div class="modal-card">
+            <h3 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 1rem; color: white;">☕ ضبط استراحة / فسحة اليوم</h3>
+            
+            <div class="form-group">
+                <label>مدة الاستراحة (بالدقائق):</label>
+                <input type="number" id="breakDurationInput" class="form-control-dark" min="5" max="90" value="20">
+            </div>
+
+            <div class="form-group">
+                <label>مكان الاستراحة (بعد أي حصة؟):</label>
+                <select id="breakAfterPeriodSelect" class="form-control-dark">
+                    <option value="1">بعد الحصة الأولى</option>
+                    <option value="2">بعد الحصة الثانية</option>
+                    <option value="3" selected>بعد الحصة الثالثة</option>
+                    <option value="4">بعد الحصة الرابعة</option>
+                    <option value="5">بعد الحصة الخامسة</option>
+                </select>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
+                <button class="btn-ghost" id="closeBreakModalBtn">إلغاء</button>
+                <button class="btn-neon-purple" id="saveBreakModalBtn">حفظ الاستراحة</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة منبثقة لإضافة تنبيه مشرف جديد -->
+    <div class="modal-overlay" id="supervisorAlertModal">
+        <div class="modal-card">
+            <h3 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 1rem; color: white;">➕ إضافة تذكير لإدارة الحصة</h3>
+            
+            <div class="form-group">
+                <label>نوع التذكير:</label>
+                <select id="supAlertType" class="form-control-dark">
+                    <option value="elapsed">تصاعدي (بعد مرور دقيقة معينة من بداية الحصة)</option>
+                    <option value="remaining">تنازلي (عندما يتبقى وقت معين على النهاية)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>الدقيقة المستهدفة:</label>
+                <input type="number" id="supAlertMinute" class="form-control-dark" min="1" max="180" placeholder="مثال: 15">
+            </div>
+
+            <div class="form-group">
+                <label>النص أو اسم التنبيه المنطوق (تحدده بيدك):</label>
+                <input type="text" id="supAlertText" class="form-control-dark" placeholder="اكتب عبارة التذكير التي تريدها بنفسك...">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
+                <button class="btn-ghost" id="closeSupModalBtn">إلغاء</button>
+                <button class="btn-neon-purple" id="saveSupModalBtn">حفظ التذكير</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- حاوية الإشعارات العائمة -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="audio.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
