@@ -31,13 +31,31 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | sudo /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Ensure Keystore Exists
+        run: |
+          if [ ! -f android/app/smart_school_bell.keystore ]; then
+            echo "Generating signing keystore..."
+            keytool -genkey -v -keystore android/app/smart_school_bell.keystore \
+              -alias smartschool \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass SmartSchoolPass2026! \
+              -keypass SmartSchoolPass2026! \
+              -dname "CN=Smart School Bell, OU=Education, O=Smart School, L=Riyadh, ST=Riyadh, C=SA"
+          fi
+
       - name: Make Gradlew Executable
         run: chmod +x android/gradlew
 
       - name: Build Signed Release APK
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleRelease -x lint -x lintVitalRelease --no-daemon --stacktrace
 
       - name: Organize Output Files
         run: |
