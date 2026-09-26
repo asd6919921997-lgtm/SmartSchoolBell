@@ -1,4 +1,10 @@
 // audio.js - محرك الأصوات والتنبيهات المخصص مع ميزة كتم الأصوات الأخرى وتحميل ملفات MP3
+const audioStorage = (typeof window !== 'undefined' && window.safeStorage) ? window.safeStorage : {
+    getItem: function(k) { try { return localStorage.getItem(k); } catch(e) { return null; } },
+    setItem: function(k, v) { try { localStorage.setItem(k, v); } catch(e) {} },
+    removeItem: function(k) { try { localStorage.removeItem(k); } catch(e) {} }
+};
+
 class SoundEngine {
     constructor() {
         this.ctx = null;
@@ -8,7 +14,7 @@ class SoundEngine {
         this.currentAudioSource = null;
         this.masterGain = null;
         this.customAudioElement = new Audio();
-        this.customAudioUrl = localStorage.getItem('smart_custom_audio_data') || null;
+        this.customAudioUrl = audioStorage.getItem('smart_custom_audio_data') || null;
         if (this.customAudioUrl) {
             this.customAudioElement.src = this.customAudioUrl;
         }
@@ -44,18 +50,18 @@ class SoundEngine {
         this.customAudioUrl = base64Data;
         this.customAudioElement.src = base64Data;
         try {
-            localStorage.setItem('smart_custom_audio_data', base64Data);
-            localStorage.setItem('smart_custom_audio_name', filename);
+            audioStorage.setItem('smart_custom_audio_data', base64Data);
+            audioStorage.setItem('smart_custom_audio_name', filename);
         } catch (e) {
-            console.warn('File too large for localStorage, keeping in session', e);
+            console.warn('File too large for storage, keeping in session', e);
         }
     }
 
     clearCustomAudio() {
         this.customAudioUrl = null;
         this.customAudioElement.src = '';
-        localStorage.removeItem('smart_custom_audio_data');
-        localStorage.removeItem('smart_custom_audio_name');
+        audioStorage.removeItem('smart_custom_audio_data');
+        audioStorage.removeItem('smart_custom_audio_name');
     }
 
     // كتم فوري لأي صوت شغال إلى نسبة 0% بسرعة قياسية
@@ -165,7 +171,7 @@ class SoundEngine {
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'ar-SA';
-        const savedRate = parseFloat(localStorage.getItem('smart_app_speech_rate') || '0.95');
+        const savedRate = parseFloat(audioStorage.getItem('smart_app_speech_rate') || '0.95');
         utterance.rate = savedRate;
         utterance.pitch = 1.05;
 

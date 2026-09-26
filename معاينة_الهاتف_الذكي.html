@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>معاينة هاتف حقيقية 100% - المنبه المدرسي الذكي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-workspace: #070514;
+            --accent-purple: #8b5cf6;
+            --accent-glow: rgba(139, 92, 246, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background: radial-gradient(circle at 50% 20%, #17113a 0%, #070514 100%);
+            min-height: 100vh;
+            font-family: 'Tajawal', sans-serif;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 1.5rem 1rem 3rem 1rem;
+            overflow-x: hidden;
+        }
+
+        /* شريط التحكم العلوي للمعاينة */
+        .preview-top-toolbar {
+            width: 100%;
+            max-width: 900px;
+            background: rgba(22, 17, 49, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 20px;
+            padding: 0.85rem 1.25rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(139, 92, 246, 0.15);
+        }
+
+        .toolbar-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 800;
+            font-size: 1.05rem;
+            color: #ffffff;
+        }
+
+        .toolbar-badge {
+            background: rgba(52, 211, 153, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.4);
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .preview-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .preview-btn:hover {
+            background: rgba(139, 92, 246, 0.3);
+            border-color: var(--accent-purple);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .preview-btn.primary {
+            background: linear-gradient(135deg, #8b5cf6, #d946ef);
+            border: none;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        /* هيكل الهاتف الذكي فائق الواقعية (Ultra-Realistic Smartphone Chassis) */
+        .phone-wrapper {
+            position: relative;
+            width: 412px;
+            height: 870px;
+            background: #000000;
+            border-radius: 54px;
+            padding: 12px;
+            box-shadow: 
+                0 0 0 3px #374151,
+                0 0 0 7px #1e1b4b,
+                0 25px 60px -10px rgba(0, 0, 0, 0.9),
+                0 0 50px rgba(139, 92, 246, 0.3);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        /* زر الصوت والباور الجانبي في الهيكل */
+        .phone-wrapper::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 130px;
+            width: 4px;
+            height: 48px;
+            background: #4b5563;
+            border-radius: 4px 0 0 4px;
+            box-shadow: 0 65px 0 #4b5563, 0 130px 0 #4b5563;
+        }
+
+        .phone-wrapper::after {
+            content: '';
+            position: absolute;
+            right: -10px;
+            top: 160px;
+            width: 4px;
+            height: 75px;
+            background: #4b5563;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* شاشة الهاتف الداخلية */
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background: #0b081e;
+            border-radius: 42px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* شريط حالة الهاتف العلوي (Status Bar) */
+        .phone-status-bar {
+            height: 38px;
+            background: #0b081e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.6rem;
+            font-size: 0.76rem;
+            font-weight: 800;
+            color: #ffffff;
+            z-index: 1000;
+            letter-spacing: 0.3px;
+        }
+
+        /* الكاميرا الأمامية الدائرية في الشاشة (Punch Hole Notch) */
+        .camera-notch {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85px;
+            height: 22px;
+            background: #000000;
+            border-radius: 20px;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-lens {
+            width: 10px;
+            height: 10px;
+            background: #0f172a;
+            border: 1.5px solid #1e293b;
+            border-radius: 50%;
+            margin-right: 32px;
+        }
+
+        /* نافذة الـ iframe لتشغيل تطبيقك الحي 100% */
+        .app-iframe {
+            width: 100%;
+            flex: 1;
+            border: none;
+            background: #0b081e;
+        }
+
+        /* شريط الإيماءات السفلي للهاتف */
+        .phone-home-indicator {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.45);
+            border-radius: 4px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        /* الملاحظات الإرشادية */
+        .preview-footer-note {
+            margin-top: 1.75rem;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            max-width: 650px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- شريط التحكم العلوي للمعاينة السريعة -->
+    <header class="preview-top-toolbar">
+        <div class="toolbar-title">
+            <span>📱 محاكي ومعاينة الهاتف المباشرة 100%</span>
+            <span class="toolbar-badge">متصل بالملفات الحية</span>
+        </div>
+        <div class="toolbar-actions">
+            <button class="preview-btn primary" onclick="refreshApp()" title="تحديث لعرض أي تعديل برمجته فوراً">
+                🔄 تحديث فوري للتعديلات
+            </button>
+            <button class="preview-btn" onclick="openDirectApp()" title="فتح في نافذة كاملة">
+                ⛶ ملء الشاشة
+            </button>
+            <button class="preview-btn" onclick="toggleSize()" id="sizeBtn" title="تكبير / تصغير حجم الهاتف">
+                🔍 تكبير المحاكي
+            </button>
+        </div>
+    </header>
+
+    <!-- هيكل هاتف ذكي حقيقي 100% -->
+    <div class="phone-wrapper" id="phoneWrapper">
+        <div class="phone-screen">
+            
+            <!-- شريط حالة الهاتف (ساعة الهاتف الحية والشبكة والبطارية) -->
+            <div class="phone-status-bar">
+                <span id="phoneClock">--:--</span>
+                <div class="camera-notch">
+                    <div class="camera-lens"></div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem;">
+                    <span>5G</span>
+                    <span>📶</span>
+                    <span>🔋 100%</span>
+                </div>
+            </div>
+
+            <!-- محرك التطبيق الحي بنسبة 100% -->
+            <iframe src="index.html" class="app-iframe" id="appIframe" allow="autoplay"></iframe>
+
+            <!-- شريط الهاتف السفلي للتطبيقات الحديثة -->
+            <div class="phone-home-indicator"></div>
+        </div>
+    </div>
+
+    <div class="preview-footer-note">
+        💡 <strong>معاينة حية ومطابقة 100% لهاتفك:</strong> أي تعديل تقوم به على ملفات الحصص أو الأجراس ينعكس هنا فوراً بمجرد الضغط على زر <strong>(🔄 تحديث فوري للتعديلات)</strong>. كما يمكنك تجربة كتم اليوم، إضافة الحصص، رنين الأجراس، ومؤقت المشرف بكامل خصائص الصوت والاهتزاز.
+    </div>
+
+    <script>
+        // تحديث ساعة هاتف المحاكي لتطابق وقت جهازك الفعلي بنظام 12 ساعة
+        function updatePhoneClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'م' : 'ص';
+            hours = hours % 12 || 12;
+            document.getElementById('phoneClock').textContent = `${hours}:${minutes} ${ampm}`;
+        }
+        setInterval(updatePhoneClock, 1000);
+        updatePhoneClock();
+
+        // زر تحديث المحاكي الفوري
+        function refreshApp() {
+            const iframe = document.getElementById('appIframe');
+            iframe.src = 'index.html?t=' + Date.now();
+        }
+
+        // فتح في نافذة كاملة
+        function openDirectApp() {
+            window.open('index.html', '_blank');
+        }
+
+        // تبديل تكبير حجم الهاتف
+        let isLarge = false;
+        function toggleSize() {
+            const wrapper = document.getElementById('phoneWrapper');
+            const btn = document.getElementById('sizeBtn');
+            isLarge = !isLarge;
+            if (isLarge) {
+                wrapper.style.width = '480px';
+                wrapper.style.height = '940px';
+                btn.textContent = '🔍 الحجم الطبيعي';
+            } else {
+                wrapper.style.width = '412px';
+                wrapper.style.height = '870px';
+                btn.textContent = '🔍 تكبير المحاكي';
+            }
+        }
+    </script>
+</body>
+</html>

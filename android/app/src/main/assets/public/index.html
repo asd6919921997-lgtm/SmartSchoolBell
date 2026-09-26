@@ -13,6 +13,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        try {
+            if (window.self !== window.top) {
+                document.documentElement.classList.add('in-iframe');
+            }
+        } catch(e) {
+            document.documentElement.classList.add('in-iframe');
+        }
+    </script>
 </head>
 <body>
 
@@ -56,8 +65,28 @@
             <!-- ===================== 1. واجهة الحصص والمنبهات (Alarms View) ===================== -->
             <section id="viewAlarms" class="view-panel active">
                 
+                <!-- كرت التحكم الشامل بنظام التنبيهات (وضع الدوام / وضع الغياب والإجازة) -->
+                <div id="masterAlarmControlCard" style="background: linear-gradient(135deg, rgba(26, 20, 60, 0.95), rgba(42, 28, 90, 0.95)); border: 1.5px solid rgba(139, 92, 246, 0.45); border-radius: var(--radius-xl); padding: 0.95rem 1.15rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span id="masterAlarmStatusIcon" style="font-size: 1.65rem; filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.6));">🔔</span>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <strong id="masterAlarmStatusTitle" style="font-size: 0.95rem; color: #ffffff;">نظام الأجراس والتنبيهات اليومي</strong>
+                                <span id="masterAlarmBadge" style="font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 12px; background: rgba(52, 211, 153, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.4);">مفعل وشغال</span>
+                            </div>
+                            <div id="masterAlarmStatusSubtitle" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+                                تصدر الأجراس تلقائياً. يمكنك إيقافه فوراً في حال الغياب مع بقاء الحصص والإعدادات محفوظة 100%.
+                            </div>
+                        </div>
+                    </div>
+                    <label class="glow-switch" style="width: 52px; height: 28px; flex-shrink: 0;" title="إيقاف أو تشغيل نظام التنبيه بالكامل (وضع الغياب)">
+                        <input type="checkbox" id="masterAlarmMainToggle" checked>
+                        <span class="glow-slider" style="border-radius: 20px;"></span>
+                    </label>
+                </div>
+
                 <!-- بطاقة حالة اليوم والوقت الحالي بنظام 12 ساعة وتخصيص اليوم -->
-                <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(217, 70, 239, 0.15)); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: var(--radius-xl); padding: 1.1rem 1.25rem; margin-bottom: 0.85rem;">
+                <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(217, 70, 239, 0.12)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: var(--radius-xl); padding: 1rem 1.2rem; margin-bottom: 0.85rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                         <span style="font-size: 0.85rem; color: #c084fc; font-weight: 700;">
                             🕒 الوقت الحالي: <strong id="liveTimeClock" style="color: white; font-size: 1.15rem; font-variant-numeric: tabular-nums;">--:--:-- ص</strong>
@@ -72,6 +101,33 @@
                     </div>
                     <div id="liveStatusBanner" style="font-size: 1.05rem; font-weight: 800; margin-top: 0.5rem; color: #ffffff;">
                         جاري فحص جدول اليوم...
+                    </div>
+                </div>
+
+                <!-- بطاقة التذكير الذكي قبل بداية الحصة القادمة بوقت أقصر يحدده المعلم -->
+                <div id="preClassReminderCard" style="background: rgba(217, 70, 239, 0.08); border: 1px solid rgba(217, 70, 239, 0.35); border-radius: var(--radius-lg); padding: 0.85rem 1rem; margin-bottom: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.88rem; font-weight: 800; color: #f472b6; display: flex; align-items: center; gap: 0.4rem;">
+                            ⏳ تذكير استباقي قبل الحصة التالية:
+                        </span>
+                        <label class="glow-switch" style="width: 44px; height: 24px;" title="تفعيل أو إلغاء التذكير المسبق">
+                            <input type="checkbox" id="preClassReminderToggleChk" checked>
+                            <span class="glow-slider" style="border-radius: 20px;"></span>
+                        </label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.82rem; color: var(--text-muted);">
+                        <span>تنبيه قبل بداية الحصة بـ:</span>
+                        <input type="number" id="preClassReminderMinutesInput" class="form-control-dark" min="1" max="20" value="3" style="width: 60px; padding: 0.25rem 0.4rem; text-align: center; font-size: 0.85rem; font-weight: 800; color: #f472b6;">
+                        <span>دقائق، وبمدة رنين:</span>
+                        <select id="preClassRingDurationSelect" class="form-control-dark" style="width: auto; padding: 0.25rem 0.5rem; font-size: 0.82rem;">
+                            <option value="3" selected>3 ثوانٍ (نغمة هادئة)</option>
+                            <option value="5">5 ثوانٍ</option>
+                            <option value="7">7 ثوانٍ</option>
+                            <option value="10">10 ثوانٍ</option>
+                        </select>
+                    </div>
+                    <div id="preClassReminderStatusNote" style="font-size: 0.74rem; color: #34d399; margin-top: 0.4rem; font-weight: 600;">
+                        ✓ سيصدر تذكير صوتي قبل الحصة بـ 3 د، ثم ينطلق الجرس الرسمي بالضبط بالثانية عند موعد البداية.
                     </div>
                 </div>
 
@@ -110,9 +166,9 @@
                     <!-- تُحقن البطاقات ديناميكياً من JavaScript -->
                 </div>
 
-                <!-- زر إضافة حصة سريعة في أسفل القائمة -->
-                <div style="margin-top: 0.75rem; text-align: center;">
-                    <button class="btn-ghost" id="addPeriodQuickBtn" style="width: 100%; justify-content: center; padding: 0.75rem; border-style: dashed;">
+                <!-- زر إضافة حصة واضح وفاخر في أسفل القائمة -->
+                <div style="margin-top: 1rem; text-align: center;">
+                    <button class="btn-neon-purple" id="addPeriodQuickBtn" style="width: 100%; justify-content: center; padding: 0.85rem 1.25rem; font-size: 0.95rem; font-weight: 800; border-radius: 16px;">
                         ➕ إضافة حصة جديدة لهذا اليوم
                     </button>
                 </div>
@@ -148,12 +204,14 @@
                         <div class="form-group" style="flex: 1; margin: 0;">
                             <label style="font-size: 0.8rem;">اختر اليوم:</label>
                             <select id="presetTargetDaySelect" class="form-control-dark" style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                                <option value="today" selected>⭐ اليوم الحالي (تلقائياً)</option>
+                                <option value="all">🔁 كل الأيام (يومياً)</option>
                                 <option value="sat">السبت</option>
                                 <option value="sun">الأحد</option>
                                 <option value="mon">الإثنين</option>
                                 <option value="tue">الثلاثاء</option>
                                 <option value="wed">الأربعاء</option>
-                                <option value="thu" selected>الخميس</option>
+                                <option value="thu">الخميس</option>
                             </select>
                         </div>
                         <div class="form-group" style="flex: 1.4; margin: 0;">
@@ -481,8 +539,16 @@
 
             <div class="form-group">
                 <label>مدة الحصة (بالدقائق):</label>
-                <input type="number" id="modalClassDuration" class="form-control-dark" min="5" max="180" value="45">
-                <small style="color: var(--text-dim); margin-top: 2px;">يمكنك تخصيص مدة أي حصة بحرية (مثلاً 45 أو 35 دقيقة).</small>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="number" id="modalClassDuration" class="form-control-dark" min="5" max="180" value="45" style="flex: 1;">
+                    <div style="display: flex; gap: 0.35rem;">
+                        <button type="button" class="day-chip duration-quick-chip" data-dur="35" style="min-width: 44px; padding: 0.35rem 0.5rem; font-size: 0.78rem;">35د</button>
+                        <button type="button" class="day-chip duration-quick-chip" data-dur="40" style="min-width: 44px; padding: 0.35rem 0.5rem; font-size: 0.78rem;">40د</button>
+                        <button type="button" class="day-chip duration-quick-chip active" data-dur="45" style="min-width: 44px; padding: 0.35rem 0.5rem; font-size: 0.78rem;">45د</button>
+                        <button type="button" class="day-chip duration-quick-chip" data-dur="50" style="min-width: 44px; padding: 0.35rem 0.5rem; font-size: 0.78rem;">50د</button>
+                    </div>
+                </div>
+                <small style="color: var(--text-dim); margin-top: 3px;">اضغط على أي زر للمدة السريعة أو اكتب أي رقم تريده بحرية.</small>
             </div>
 
             <div class="form-group">
@@ -561,9 +627,40 @@
         </div>
     </div>
 
+    <!-- نافذة تأكيد الحذف المخصصة الفاخرة -->
+    <div class="modal-overlay" id="confirmActionModal">
+        <div class="modal-card" style="text-align: center; max-width: 360px;">
+            <div style="font-size: 2.3rem; margin-bottom: 0.4rem;">⚠️</div>
+            <h3 id="confirmModalTitle" style="font-size: 1.15rem; font-weight: 800; margin-bottom: 0.45rem; color: #ffffff;">تأكيد الحذف</h3>
+            <p id="confirmModalMessage" style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1.25rem;">
+                هل أنت متأكد من رغبتك في إتمام هذا الإجراء؟
+            </p>
+            <div style="display: flex; gap: 0.75rem;">
+                <button class="btn-ghost" id="confirmModalCancelBtn" style="flex: 1; justify-content: center; font-weight: 700;">
+                    إلغاء التراجع
+                </button>
+                <button class="btn-neon-purple" id="confirmModalApproveBtn" style="background: linear-gradient(135deg, #ef4444, #dc2626); border-color: #ef4444; flex: 1; justify-content: center; font-weight: 800; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);">
+                    🗑️ نعم، احذف
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- حاوية الإشعارات العائمة -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <script>
+        try {
+            if (window.self !== window.top) {
+                document.documentElement.classList.add('in-iframe');
+                document.body.classList.add('in-iframe');
+            }
+        } catch(e) {
+            document.documentElement.classList.add('in-iframe');
+            document.body.classList.add('in-iframe');
+        }
+    </script>
+    <script src="storage.js"></script>
     <script src="audio.js"></script>
     <script src="app.js"></script>
 </body>

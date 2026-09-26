@@ -1,5 +1,12 @@
 // app.js - محرك المنبه المدرسي المطور بالكامل حسب متطلبات المستخدم بدقة
 
+const storage = (typeof window !== 'undefined' && window.safeStorage) ? window.safeStorage : {
+    getItem: function(k) { try { return localStorage.getItem(k); } catch(e) { return null; } },
+    setItem: function(k, v) { try { localStorage.setItem(k, v); } catch(e) {} },
+    removeItem: function(k) { try { localStorage.removeItem(k); } catch(e) {} },
+    clear: function() { try { localStorage.clear(); } catch(e) {} }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // =========================================================================
@@ -28,10 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
         appVolume: 1.0
     };
 
-    let generalSettings = JSON.parse(localStorage.getItem('smart_general_settings')) || defaultGeneralSettings;
+    let generalSettings = JSON.parse(storage.getItem('smart_general_settings')) || defaultGeneralSettings;
 
     // تهيئة جداول الأيام (كل يوم له حصصه واستراحته المستقلة)
-    let daySchedules = JSON.parse(localStorage.getItem('smart_day_schedules')) || null;
+    let daySchedules = JSON.parse(storage.getItem('smart_day_schedules')) || null;
 
     if (!daySchedules) {
         daySchedules = {};
@@ -59,13 +66,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // تنبيهات المشرف المخصصة
-    let supervisorAlerts = JSON.parse(localStorage.getItem('smart_supervisor_alerts')) || [
+    let supervisorAlerts = JSON.parse(storage.getItem('smart_supervisor_alerts')) || [
         { id: 1, type: 'elapsed', minute: 15, text: 'مرت 15 دقيقة', enabled: true },
         { id: 2, type: 'elapsed', minute: 30, text: 'مرت 30 دقيقة', enabled: true },
         { id: 3, type: 'remaining', minute: 5, text: 'متبقي 5 دقائق على نهاية الحصة', enabled: true }
     ];
 
-    let currentDay = localStorage.getItem('smart_active_day') || 'sun';
+    let currentDay = storage.getItem('smart_active_day') || 'sun';
     if (!DAYS_KEYS.includes(currentDay)) currentDay = 'sun';
 
     // متغيرات مؤقت المشرف
@@ -117,15 +124,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. دوال الحفظ والتحميل
     // =========================================================================
     function saveGeneralSettings() {
-        localStorage.setItem('smart_general_settings', JSON.stringify(generalSettings));
+        storage.setItem('smart_general_settings', JSON.stringify(generalSettings));
     }
 
     function saveDaySchedules() {
-        localStorage.setItem('smart_day_schedules', JSON.stringify(daySchedules));
+        storage.setItem('smart_day_schedules', JSON.stringify(daySchedules));
     }
 
     function saveSupervisorAlerts() {
-        localStorage.setItem('smart_supervisor_alerts', JSON.stringify(supervisorAlerts));
+        storage.setItem('smart_supervisor_alerts', JSON.stringify(supervisorAlerts));
     }
 
     // =========================================================================
@@ -156,6 +163,41 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // =========================================================================
+    // نافذة تأكيد الإجراءات والحذف المخصصة الفاخرة
+    // =========================================================================
+    function showConfirmDialog(title, message, onApprove) {
+        const modal = document.getElementById('confirmActionModal');
+        if (!modal) {
+            if (confirm(`${title}\n${message}`)) {
+                if (onApprove) onApprove();
+            }
+            return;
+        }
+
+        document.getElementById('confirmModalTitle').textContent = title || '⚠️ تأكيد الحذف';
+        document.getElementById('confirmModalMessage').textContent = message || 'هل أنت متأكد من رغبتك في إتمام هذا الإجراء؟';
+        modal.classList.add('open');
+
+        const approveBtn = document.getElementById('confirmModalApproveBtn');
+        const cancelBtn = document.getElementById('confirmModalCancelBtn');
+
+        const cleanup = () => {
+            modal.classList.remove('open');
+            approveBtn.onclick = null;
+            cancelBtn.onclick = null;
+        };
+
+        cancelBtn.onclick = () => {
+            cleanup();
+        };
+
+        approveBtn.onclick = () => {
+            cleanup();
+            if (onApprove) onApprove();
+        };
+    }
+
     // تحديث الساعة الحية ومراقبة التنبيهات كل ثانية
     function updateClock() {
         const now = new Date();
@@ -167,11 +209,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentSec = now.getSeconds();
         const timeKey = `${current24H}:${currentMin}`;
 
-        // فحص التنبيهات والجدولة المسبقة في الثواني الأولى من الدقيقة
-        if (currentSec <= 2) {
-            checkCurrentDayAlarms(now, timeKey);
-            checkAutoScheduledPresetTrigger(now, timeKey);
-        }
+        // فحص التنبيهات والجدولة المسبقة في كل ثانية مع ضمان عدم التكرار
+        checkCurrentDayAlarms(now, timeKey);
+        checkAutoScheduledPresetTrigger(now, timeKey);
     }
     setInterval(updateClock, 1000);
     updateClock();
@@ -403,12 +443,18 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const id = parseInt(btn.getAttribute('data-id'), 10);
-                if (confirm('هل أنت متأكد من حذف هذه الحصة؟')) {
-                    dayData.classes = dayData.classes.filter(c => c.id !== id);
-                    saveDaySchedules();
-                    renderDayView();
-                    showToast('تم حذف الحصة بنجاح', 'success');
-                }
+                const cls = dayData.classes.find(c => c.id === id);
+                const clsName = cls ? `${cls.name} (${cls.subject || 'بدون مادة'})` : 'هذه الحصة';
+                showConfirmDialog(
+                    '⚠️ تأكيد حذف الحصة',
+                    `هل أنت متأكد من رغبتك في حذف "${clsName}" من جدول يوم ${DAYS_NAMES[currentDay]}؟`,
+                    () => {
+                        dayData.classes = dayData.classes.filter(c => c.id !== id);
+                        saveDaySchedules();
+                        renderDayView();
+                        showToast(`تم حذف ${clsName} بنجاح`, 'success');
+                    }
+                );
             });
         });
 
@@ -452,6 +498,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 6. مراقبة التنبيهات المسبقة ورنين جرس المدرسة لليوم الحي
     // =========================================================================
     function checkCurrentDayAlarms(now, currentTimeKey) {
+        // إذا كان نظام الأجراس معطلاً رئيسياً (وضع الغياب / الإجازة) لا تصدر أي تنبيهات
+        if (generalSettings.masterAlarmsActive === false) return;
+
         // نحدد مفتاح اليوم بحسب يوم الجهاز الفعلي
         const jsDayIndex = now.getDay(); // 0 = الأحد, 1 = الإثنين ... 6 = السبت
         const dayMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -466,17 +515,18 @@ document.addEventListener('DOMContentLoaded', () => {
         timeline.forEach(item => {
             if (item.enabled === false) return;
 
-            // 1. التنبيه المسبق قبل الحصة
-            const preAlertMins = generalSettings.preAlertMinutes;
-            if (preAlertMins > 0 && !item.isBreak) {
-                const triggerMins = item.startTotalMins - preAlertMins;
+            // 1. التنبيه الاستباقي قبل بداية الحصة التالية (حرية تحديد الوقت وزمن الرنين للمعلم)
+            const preMins = (generalSettings.preClassReminderEnabled !== false) ? (generalSettings.preClassReminderMinutes || 3) : 0;
+            if (preMins > 0 && !item.isBreak) {
+                const triggerMins = item.startTotalMins - preMins;
                 if (nowTotalMins === triggerMins && lastPreAlertKey !== `pre_${item.id}_${currentTimeKey}`) {
                     lastPreAlertKey = `pre_${item.id}_${currentTimeKey}`;
-                    triggerPreClassAlert(item, preAlertMins);
+                    const ringDur = generalSettings.preClassRingDuration || 3;
+                    triggerPreClassAlert(item, preMins, ringDur);
                 }
             }
 
-            // 2. جرس بداية الحصة
+            // 2. جرس بداية الحصة الأساسي (بالثانية وبالضبط على الوقت المحدد لبداية الحصة التالية)
             if (generalSettings.autoBellEnabled && item.startTime === currentTimeKey && lastRungTimeKey !== `start_${item.id}_${currentTimeKey}`) {
                 lastRungTimeKey = `start_${item.id}_${currentTimeKey}`;
                 triggerBell(`بداية ${item.name}: ${item.subject || ''}`);
@@ -492,16 +542,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function triggerPreClassAlert(item, mins) {
-        const text = `تنبيه: متبقي ${mins} دقائق على بداية ${item.name} (${item.subject || ''}) في ${item.room || 'فصلك'}`;
-        showToast(`🔔 ${text}`, 'info');
+    function triggerPreClassAlert(item, mins, ringDur = 3) {
+        const text = `تذكير: متبقي ${mins} دقائق على بداية ${item.name} (${item.subject || ''}) في ${item.room || 'فصلك'}`;
+        showToast(`⏳ ${text}`, 'info');
 
         if (generalSettings.duckOtherSounds && window.soundEngine) {
             window.soundEngine.duckAllOtherSounds();
         }
 
         if (window.soundEngine) {
-            window.soundEngine.playAlertWithVoice(text, true, generalSettings.appVolume);
+            window.soundEngine.playSchoolBell(ringDur, generalSettings.appVolume);
+            setTimeout(() => {
+                window.soundEngine.speakArabic(text);
+            }, (ringDur * 1000) + 400);
         }
 
         if ('Notification' in window && Notification.permission === 'granted') {
@@ -690,7 +743,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const presetManualEndInput = document.getElementById('presetManualEndInput');
     const autoScheduleBanner = document.getElementById('autoScheduleBanner');
 
-    let autoScheduledPreset = JSON.parse(localStorage.getItem('smart_auto_schedule_preset')) || {
+    let autoScheduledPreset = JSON.parse(storage.getItem('smart_auto_schedule_preset')) || {
         enabled: false,
         day: 'thu',
         classId: 'custom',
@@ -718,7 +771,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updatePresetClassDropdown(dayKey) {
         presetTargetClassSelect.innerHTML = '';
-        const timeline = getCalculatedTimelineForDay(dayKey);
+        let actualDayKey = dayKey;
+        if (dayKey === 'today' || dayKey === 'all') {
+            const dMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+            actualDayKey = dMap[new Date().getDay()];
+        }
+        const timeline = getCalculatedTimelineForDay(actualDayKey);
         const classesOnly = timeline.filter(item => !item.isBreak);
 
         classesOnly.forEach((c) => {
@@ -749,29 +807,35 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyPresetSelection() {
         const dayKey = presetTargetDaySelect.value;
         const selectedVal = presetTargetClassSelect.value;
+        let actualDayKey = dayKey;
+        if (dayKey === 'today' || dayKey === 'all') {
+            const dMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+            actualDayKey = dMap[new Date().getDay()];
+        }
 
         if (selectedVal === 'custom') {
             customTimeRangeBox.style.display = 'block';
             const [sh, sm] = presetManualStartInput.value.split(':').map(Number);
             const [eh, em] = presetManualEndInput.value.split(':').map(Number);
             let dur = (eh * 60 + em) - (sh * 60 + sm);
-            if (dur <= 0) dur = 45;
+            if (dur <= 0) dur = 40;
 
             autoScheduledPreset.day = dayKey;
             autoScheduledPreset.classId = 'custom';
             autoScheduledPreset.startTime = presetManualStartInput.value;
             autoScheduledPreset.endTime = presetManualEndInput.value;
             autoScheduledPreset.duration = dur;
-            autoScheduledPreset.className = `حصة مخصصة (${convert24to12(autoScheduledPreset.startTime).time} ${convert24to12(autoScheduledPreset.startTime).ampm})`;
+            autoScheduledPreset.className = `حصة المشرف المخصصة (${convert24to12(autoScheduledPreset.startTime).time} ${convert24to12(autoScheduledPreset.startTime).ampm})`;
 
             timerManualMinutesInput.value = dur;
             timerTotalSeconds = dur * 60;
             updateTimerDisplay();
 
-            autoScheduleBanner.innerHTML = `🟢 مجدولة: ستبدأ الحصة تلقائياً الساعة <strong>${convert24to12(autoScheduledPreset.startTime).time} ${convert24to12(autoScheduledPreset.startTime).ampm}</strong> يوم <strong>${DAYS_NAMES[dayKey]}</strong> وتطلق تنبيهاتك المحددة بالأسفل!`;
+            const dayLabel = (dayKey === 'today') ? 'اليوم' : ((dayKey === 'all') ? 'كل يوم' : DAYS_NAMES[dayKey]);
+            autoScheduleBanner.innerHTML = `🟢 مجدولة: ستبدأ الحصة تلقائياً الساعة <strong>${convert24to12(autoScheduledPreset.startTime).time} ${convert24to12(autoScheduledPreset.startTime).ampm}</strong> (<strong>${dayLabel}</strong>) وتطلق تنبيهاتك المحددة بالأسفل!`;
         } else {
             customTimeRangeBox.style.display = 'none';
-            const timeline = getCalculatedTimelineForDay(dayKey);
+            const timeline = getCalculatedTimelineForDay(actualDayKey);
             const cls = timeline.find(item => item.id == selectedVal);
             if (cls) {
                 autoScheduledPreset.day = dayKey;
@@ -788,7 +852,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const tStart = convert24to12(cls.startTime);
                 const tEnd = convert24to12(cls.endTime);
-                autoScheduleBanner.innerHTML = `🟢 مجدولة: <strong>${cls.name} (${cls.subject || ''})</strong> يوم <strong>${DAYS_NAMES[dayKey]}</strong> (تبدأ الساعة ${tStart.time} ${tStart.ampm} وتنتهي ${tEnd.time} ${tEnd.ampm}) ستبدأ وتطلق تنبيهاتك تلقائياً دون لمس الجوال!`;
+                const dayLabel = (dayKey === 'today') ? 'اليوم' : ((dayKey === 'all') ? 'كل يوم' : DAYS_NAMES[dayKey]);
+                autoScheduleBanner.innerHTML = `🟢 مجدولة: <strong>${cls.name} (${cls.subject || ''})</strong> (<strong>${dayLabel}</strong>) ستبدأ تلقائياً (${tStart.time} ${tStart.ampm} إلى ${tEnd.time} ${tEnd.ampm}) وتطلق التنبيهات دون لمس الجوال!`;
             }
         }
 
@@ -796,7 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveAutoScheduledPreset() {
-        localStorage.setItem('smart_auto_schedule_preset', JSON.stringify(autoScheduledPreset));
+        storage.setItem('smart_auto_schedule_preset', JSON.stringify(autoScheduledPreset));
         enableAutoScheduleChk.checked = autoScheduledPreset.enabled;
         autoScheduleStateText.textContent = autoScheduledPreset.enabled ? 'مفعلة وتنتظر الوقت' : 'معطلة';
         autoScheduleStateText.style.color = autoScheduledPreset.enabled ? '#34d399' : 'var(--text-muted)';
@@ -810,8 +875,14 @@ document.addEventListener('DOMContentLoaded', () => {
         applyPresetSelection();
     });
 
-    presetManualStartInput.addEventListener('change', applyPresetSelection);
-    presetManualEndInput.addEventListener('change', applyPresetSelection);
+    presetManualStartInput.addEventListener('change', () => {
+        autoScheduledPreset.enabled = true;
+        applyPresetSelection();
+    });
+    presetManualEndInput.addEventListener('change', () => {
+        autoScheduledPreset.enabled = true;
+        applyPresetSelection();
+    });
 
     enableAutoScheduleChk.addEventListener('change', () => {
         autoScheduledPreset.enabled = enableAutoScheduleChk.checked;
@@ -855,7 +926,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const dMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
         const todayK = dMap[jsDayIdx];
 
-        if (todayK === autoScheduledPreset.day && timeKey === autoScheduledPreset.startTime) {
+        // هل اليوم يطابق (اليوم الحالي أو كل الأيام أو اليوم المختار بالاسم)
+        const dayMatches = (!autoScheduledPreset.day || 
+                            autoScheduledPreset.day === 'today' || 
+                            autoScheduledPreset.day === 'all' || 
+                            autoScheduledPreset.day === todayK);
+
+        // توحيد صيغة التوقيت لضمان مطابقة 8:25 مع 08:25
+        let targetTime = autoScheduledPreset.startTime || '';
+        if (targetTime.includes(':')) {
+            const parts = targetTime.split(':').map(p => String(p).trim().padStart(2, '0'));
+            targetTime = `${parts[0]}:${parts[1]}`;
+        }
+
+        if (dayMatches && timeKey === targetTime) {
             const dateKey = `${now.toDateString()}_${timeKey}`;
             if (lastAutoScheduledDateKey !== dateKey) {
                 lastAutoScheduledDateKey = dateKey;
@@ -865,9 +949,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // التهيئة المسبقة لحقول الجدولة
-    presetTargetDaySelect.value = autoScheduledPreset.day || 'thu';
-    presetManualStartInput.value = autoScheduledPreset.startTime || '08:35';
-    presetManualEndInput.value = autoScheduledPreset.endTime || '09:15';
+    presetTargetDaySelect.value = autoScheduledPreset.day || 'today';
+    presetManualStartInput.value = autoScheduledPreset.startTime || '08:25';
+    presetManualEndInput.value = autoScheduledPreset.endTime || '09:05';
     updatePresetClassDropdown(presetTargetDaySelect.value);
     saveAutoScheduledPreset();
 
@@ -948,22 +1032,34 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.del-sup-alert-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = parseInt(btn.getAttribute('data-id'), 10);
-                supervisorAlerts = supervisorAlerts.filter(a => a.id !== id);
-                saveSupervisorAlerts();
-                renderSupervisorAlerts();
-                showToast('تم حذف التنبيه', 'info');
+                const a = supervisorAlerts.find(item => item.id === id);
+                const alertText = a ? `"${a.text}"` : 'هذا التذكير';
+                showConfirmDialog(
+                    '⚠️ تأكيد حذف التذكير',
+                    `هل أنت متأكد من رغبتك في حذف تذكير المشرف: ${alertText}؟`,
+                    () => {
+                        supervisorAlerts = supervisorAlerts.filter(item => item.id !== id);
+                        saveSupervisorAlerts();
+                        renderSupervisorAlerts();
+                        showToast('تم حذف التذكير بنجاح', 'info');
+                    }
+                );
             });
         });
     }
 
     // زر مسح كافة تنبيهات المشرف
     document.getElementById('clearSupervisorAlertsBtn').addEventListener('click', () => {
-        if (confirm('هل تريد مسح كافة تنبيهات المشرف لإضافة تنبيهاتك الخاصة من الصفر؟')) {
-            supervisorAlerts = [];
-            saveSupervisorAlerts();
-            renderSupervisorAlerts();
-            showToast('تم مسح تنبيهات المشرف بالكامل. يمكنك الآن إضافة تنبيهاتك بيدك.', 'success');
-        }
+        showConfirmDialog(
+            '⚠️ مسح كافة التنبيهات',
+            'هل أنت متأكد من رغبتك في مسح كافة تنبيهات المشرف المخصصة والبدء من الصفر؟',
+            () => {
+                supervisorAlerts = [];
+                saveSupervisorAlerts();
+                renderSupervisorAlerts();
+                showToast('تم مسح تنبيهات المشرف بالكامل. يمكنك الآن إضافة تنبيهاتك بيدك.', 'success');
+            }
+        );
     });
 
     // Modal تنبيهات المشرف
@@ -1009,15 +1105,39 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingClassId = null;
 
     function openEditClassModal(cls = null) {
-        const dayData = daySchedules[currentDay];
-        if (!dayData) return;
+        let dayData = daySchedules[currentDay];
+        if (!dayData) {
+            daySchedules[currentDay] = {
+                enabled: true,
+                customStartTime: null,
+                breakEnabled: true,
+                breakDuration: 20,
+                breakAfterPeriod: 3,
+                classes: []
+            };
+            dayData = daySchedules[currentDay];
+        }
+
+        // إذا كان اليوم معطلاً، نفعله تلقائياً عند إضافة حصة
+        if (!dayData.enabled) {
+            dayData.enabled = true;
+            saveDaySchedules();
+            renderDayView();
+        }
+
+        const durationInput = document.getElementById('modalClassDuration');
+        const updateChips = (durVal) => {
+            document.querySelectorAll('.duration-quick-chip').forEach(ch => {
+                ch.classList.toggle('active', parseInt(ch.getAttribute('data-dur'), 10) === parseInt(durVal, 10));
+            });
+        };
 
         if (cls) {
             editingClassId = cls.id;
             document.getElementById('modalClassName').value = cls.name;
             document.getElementById('modalClassSubject').value = cls.subject || '';
             document.getElementById('modalClassRoom').value = cls.room || '';
-            document.getElementById('modalClassDuration').value = cls.duration || generalSettings.globalPeriodDuration;
+            durationInput.value = cls.duration || generalSettings.globalPeriodDuration || 45;
             document.getElementById('modalClassIconColor').value = cls.icon || 'purple';
         } else {
             editingClassId = null;
@@ -1025,24 +1145,61 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('modalClassName').value = `الحصة ${count + 1}`;
             document.getElementById('modalClassSubject').value = '';
             document.getElementById('modalClassRoom').value = '';
-            document.getElementById('modalClassDuration').value = generalSettings.globalPeriodDuration;
+            durationInput.value = generalSettings.globalPeriodDuration || 45;
             document.getElementById('modalClassIconColor').value = 'purple';
         }
+
+        updateChips(durationInput.value);
         editClassModal.classList.add('open');
+
+        setTimeout(() => {
+            document.getElementById('modalClassSubject').focus();
+        }, 150);
     }
+
+    // ربط أزرار المدة السريعة (35د، 40د، 45د، 50د)
+    document.querySelectorAll('.duration-quick-chip').forEach(ch => {
+        ch.addEventListener('click', (e) => {
+            e.preventDefault();
+            const dur = ch.getAttribute('data-dur');
+            document.getElementById('modalClassDuration').value = dur;
+            document.querySelectorAll('.duration-quick-chip').forEach(c => c.classList.remove('active'));
+            ch.classList.add('active');
+        });
+    });
+
+    document.getElementById('modalClassDuration').addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        document.querySelectorAll('.duration-quick-chip').forEach(ch => {
+            ch.classList.toggle('active', parseInt(ch.getAttribute('data-dur'), 10) === val);
+        });
+    });
 
     document.getElementById('topAddBtn').addEventListener('click', () => openEditClassModal(null));
     document.getElementById('addPeriodQuickBtn').addEventListener('click', () => openEditClassModal(null));
     document.getElementById('closeClassModalBtn').addEventListener('click', () => editClassModal.classList.remove('open'));
 
+    // دعم مفتاح Enter للحفظ الفوري
+    ['modalClassName', 'modalClassSubject', 'modalClassRoom', 'modalClassDuration'].forEach(id => {
+        const inp = document.getElementById(id);
+        if (inp) {
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('saveClassModalBtn').click();
+                }
+            });
+        }
+    });
+
     document.getElementById('saveClassModalBtn').addEventListener('click', () => {
         const dayData = daySchedules[currentDay];
         if (!dayData) return;
 
-        const name = document.getElementById('modalClassName').value.trim();
+        let name = document.getElementById('modalClassName').value.trim();
         const subject = document.getElementById('modalClassSubject').value.trim();
         const room = document.getElementById('modalClassRoom').value.trim();
-        const duration = parseInt(document.getElementById('modalClassDuration').value, 10);
+        let duration = parseInt(document.getElementById('modalClassDuration').value, 10);
         const icon = document.getElementById('modalClassIconColor').value;
 
         const iconChars = {
@@ -1053,9 +1210,12 @@ document.addEventListener('DOMContentLoaded', () => {
             green: '📚'
         };
 
-        if (!name || !duration) {
-            alert('يرجى إدخال اسم الحصة والمدة');
-            return;
+        const count = (dayData.classes || []).length;
+        if (!name) {
+            name = subject ? `حصة ${subject}` : `الحصة ${count + 1}`;
+        }
+        if (!duration || isNaN(duration) || duration <= 0) {
+            duration = generalSettings.globalPeriodDuration || 45;
         }
 
         if (editingClassId) {
@@ -1068,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cls.icon = icon;
                 cls.iconChar = iconChars[icon] || '📅';
             }
-            showToast(`تم تعديل بيانات ${name}`, 'success');
+            showToast(`تم تعديل بيانات ${name} بنجاح`, 'success');
         } else {
             dayData.classes.push({
                 id: Date.now(),
@@ -1080,7 +1240,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 iconChar: iconChars[icon] || '📅',
                 enabled: true
             });
-            showToast(`تمت إضافة ${name} إلى يوم ${DAYS_NAMES[currentDay]}`, 'success');
+            showToast(`تمت إضافة ${name} (${duration} دقيقة) بنجاح!`, 'success');
         }
 
         saveDaySchedules();
@@ -1156,7 +1316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.day-chip').forEach(chip => {
         chip.addEventListener('click', () => {
             currentDay = chip.getAttribute('data-day');
-            localStorage.setItem('smart_active_day', currentDay);
+            storage.setItem('smart_active_day', currentDay);
             renderDayView();
         });
     });
@@ -1218,6 +1378,100 @@ document.addEventListener('DOMContentLoaded', () => {
         volumePercentDisplay.textContent = Math.round(generalSettings.appVolume * 100) + '%';
         saveGeneralSettings();
     });
+
+    // =========================================================================
+    // التحكم الشامل بنظام الأجراس والتنبيهات (وضع الغياب / الإجازة)
+    // =========================================================================
+    const masterAlarmMainToggle = document.getElementById('masterAlarmMainToggle');
+    const masterAlarmStatusIcon = document.getElementById('masterAlarmStatusIcon');
+    const masterAlarmStatusTitle = document.getElementById('masterAlarmStatusTitle');
+    const masterAlarmBadge = document.getElementById('masterAlarmBadge');
+    const masterAlarmStatusSubtitle = document.getElementById('masterAlarmStatusSubtitle');
+
+    function updateMasterAlarmUI() {
+        if (!masterAlarmMainToggle) return;
+        const isActive = generalSettings.masterAlarmsActive !== false;
+        masterAlarmMainToggle.checked = isActive;
+        if (isActive) {
+            masterAlarmStatusIcon.textContent = '🔔';
+            masterAlarmStatusIcon.style.filter = 'drop-shadow(0 0 10px rgba(52, 211, 153, 0.6))';
+            masterAlarmBadge.textContent = 'مفعل وشغال';
+            masterAlarmBadge.style.background = 'rgba(52, 211, 153, 0.2)';
+            masterAlarmBadge.style.color = '#34d399';
+            masterAlarmBadge.style.borderColor = 'rgba(52, 211, 153, 0.4)';
+            masterAlarmStatusSubtitle.textContent = 'تصدر الأجراس والتنبيهات تلقائياً. يمكنك إيقافه فوراً في حال الغياب مع بقاء الحصص والإعدادات محفوظة 100%.';
+        } else {
+            masterAlarmStatusIcon.textContent = '🔕';
+            masterAlarmStatusIcon.style.filter = 'drop-shadow(0 0 10px rgba(245, 158, 11, 0.6))';
+            masterAlarmBadge.textContent = 'متوقف مؤقتاً (وضع الغياب)';
+            masterAlarmBadge.style.background = 'rgba(245, 158, 11, 0.25)';
+            masterAlarmBadge.style.color = '#fbbf24';
+            masterAlarmBadge.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+            masterAlarmStatusSubtitle.textContent = '⚠️ الأجراس والتنبيهات مكتومة اليوم بالكامل (وضع الغياب). جميع جداولك وحصصك محفوظة بنسبة 100% ولن تُمس.';
+        }
+    }
+
+    if (masterAlarmMainToggle) {
+        masterAlarmMainToggle.addEventListener('change', () => {
+            generalSettings.masterAlarmsActive = masterAlarmMainToggle.checked;
+            saveGeneralSettings();
+            updateMasterAlarmUI();
+            if (generalSettings.masterAlarmsActive) {
+                showToast('🔔 تم تشغيل نظام الأجراس والتنبيهات بنجاح!', 'success');
+            } else {
+                showToast('🔕 تم تفعيل وضع الغياب: تم كتم الأجراس مؤقتاً مع الحفاظ التام على الحصص', 'info');
+            }
+        });
+    }
+
+    // =========================================================================
+    // التذكير الاستباقي قبل بداية الحصة التالية (حرية تحديد الوقت وزمن الرنين)
+    // =========================================================================
+    const preClassReminderToggleChk = document.getElementById('preClassReminderToggleChk');
+    const preClassReminderMinutesInput = document.getElementById('preClassReminderMinutesInput');
+    const preClassRingDurationSelect = document.getElementById('preClassRingDurationSelect');
+    const preClassReminderStatusNote = document.getElementById('preClassReminderStatusNote');
+
+    function updatePreClassReminderUI() {
+        if (!preClassReminderToggleChk) return;
+        preClassReminderToggleChk.checked = generalSettings.preClassReminderEnabled !== false;
+        preClassReminderMinutesInput.value = generalSettings.preClassReminderMinutes || 3;
+        preClassRingDurationSelect.value = String(generalSettings.preClassRingDuration || 3);
+        
+        const mins = preClassReminderMinutesInput.value;
+        const dur = preClassRingDurationSelect.value;
+        if (preClassReminderToggleChk.checked) {
+            preClassReminderStatusNote.innerHTML = `✓ سيصدر تذكير صوتي قبل الحصة بـ <strong>${mins} دقائق</strong> (رنين ${dur} ثوانٍ)، ثم ينطلق الجرس الرسمي بالضبط بالثانية عند موعد البداية.`;
+            preClassReminderStatusNote.style.color = '#34d399';
+        } else {
+            preClassReminderStatusNote.innerHTML = `معطل: لن يصدر تذكير مسبق، وسينطلق فقط الجرس الرسمي عند بداية الحصة بالضبط.`;
+            preClassReminderStatusNote.style.color = 'var(--text-muted)';
+        }
+    }
+
+    if (preClassReminderToggleChk) {
+        preClassReminderToggleChk.addEventListener('change', () => {
+            generalSettings.preClassReminderEnabled = preClassReminderToggleChk.checked;
+            saveGeneralSettings();
+            updatePreClassReminderUI();
+            showToast(generalSettings.preClassReminderEnabled ? 'تم تفعيل التذكير المسبق قبل الحصص' : 'تم تعطيل التذكير المسبق', 'info');
+        });
+
+        preClassReminderMinutesInput.addEventListener('change', () => {
+            generalSettings.preClassReminderMinutes = parseInt(preClassReminderMinutesInput.value, 10) || 3;
+            saveGeneralSettings();
+            updatePreClassReminderUI();
+        });
+
+        preClassRingDurationSelect.addEventListener('change', () => {
+            generalSettings.preClassRingDuration = parseInt(preClassRingDurationSelect.value, 10) || 3;
+            saveGeneralSettings();
+            updatePreClassReminderUI();
+        });
+    }
+
+    updateMasterAlarmUI();
+    updatePreClassReminderUI();
 
     // تحديث شيك بوكس أيام الأسبوع في الضبط العام
     function updateWeekDaysCheckboxes() {
@@ -1284,7 +1538,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const customAudioNameDisplay = document.getElementById('customAudioNameDisplay');
 
     function updateCustomAudioUI() {
-        const savedName = localStorage.getItem('smart_custom_audio_name');
+        const savedName = storage.getItem('smart_custom_audio_name');
         if (savedName) {
             customAudioNameDisplay.innerHTML = `🎵 الملف المخصص: <strong style="color:#c084fc;">${savedName}</strong>`;
             removeCustomAudioBtn.style.display = 'inline-flex';
@@ -1327,33 +1581,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     removeCustomAudioBtn.addEventListener('click', () => {
-        if (window.soundEngine) {
-            window.soundEngine.clearCustomAudio();
-        }
-        updateCustomAudioUI();
-        showToast('تمت استعادة نغمة الجرس الافتراضية', 'info');
+        showConfirmDialog(
+            '⚠️ استعادة نغمة الجرس',
+            'هل أنت متأكد من رغبتك في إزالة الملف الصوتي الخاص واستعادة رنة الجرس الافتراضية؟',
+            () => {
+                if (window.soundEngine) {
+                    window.soundEngine.clearCustomAudio();
+                }
+                updateCustomAudioUI();
+                showToast('تمت استعادة نغمة الجرس الافتراضية', 'info');
+            }
+        );
     });
 
     // =========================================================================
     // 13. زر تصفير البيانات التجريبية (للبدء من الصفر)
     // =========================================================================
     document.getElementById('wipeAllDataBtn').addEventListener('click', () => {
-        if (confirm('تحذير: هل أنت متأكد من تصفير ومسح كافة الحصص التجريبية والبدء من الصفر تماماً؟')) {
-            // تفريغ كافة الحصص في كل الأيام
-            DAYS_KEYS.forEach(day => {
-                if (daySchedules[day]) {
-                    daySchedules[day].classes = [];
-                }
-            });
-            // تفريغ تنبيهات المشرف
-            supervisorAlerts = [];
+        showConfirmDialog(
+            '⚠️ تصفير البيانات والبدء من الصفر',
+            'تحذير هام: سيتم مسح كافة الحصص في جميع الأيام وتفريغ كافة تنبيهات المشرف للبدء من الصفر تماماً. هل أنت متأكد؟',
+            () => {
+                // تفريغ كافة الحصص في كل الأيام
+                DAYS_KEYS.forEach(day => {
+                    if (daySchedules[day]) {
+                        daySchedules[day].classes = [];
+                    }
+                });
+                // تفريغ تنبيهات المشرف
+                supervisorAlerts = [];
 
-            saveDaySchedules();
-            saveSupervisorAlerts();
-            renderDayView();
-            renderSupervisorAlerts();
-            showToast('تم تصفير البيانات بنجاح! يمكنك الآن إضافة حصصك الحقيقية وتنبيهاتك بيدك.', 'success');
-        }
+                saveDaySchedules();
+                saveSupervisorAlerts();
+                renderDayView();
+                renderSupervisorAlerts();
+                showToast('تم تصفير البيانات بنجاح! يمكنك الآن إضافة حصصك الحقيقية وتنبيهاتك بيدك.', 'success');
+            }
+        );
     });
 
     // ضرب الجرس اليدوي
